@@ -189,6 +189,7 @@ async function manejar(req, res, url) {
   if (p === '/api/config' && m === 'PUT') {
     const b = await leerJSON(req);
     for (const k of ['n8n_url', 'n8n_asistente_url']) if (k in b) { if (!/^https?:\/\/[^\s]+$/i.test(b[k])) throw err(400, `URL inválida en ${k}`); setConfig(k, b[k]); }
+    if ('n8n_token' in b) { const t = String(b.n8n_token || '').trim(); if (t.length > 200 || /\s/.test(t)) throw err(400, 'Token inválido'); setConfig('n8n_token', t); }
     if ('modo_ia' in b) { if (!['n8n', 'local'].includes(b.modo_ia)) throw err(400, 'Modo inválido'); setConfig('modo_ia', b.modo_ia); }
     if ('fallback_local' in b) setConfig('fallback_local', b.fallback_local ? '1' : '0');
     if ('empresa' in b) setConfig('empresa', String(b.empresa || '').slice(0, 120));
@@ -196,8 +197,10 @@ async function manejar(req, res, url) {
   }
   if (p === '/api/config/probar' && m === 'POST') {
     const c = configPublica(); const r = { n8n_vivo: false, webhook_ok: false, mensaje: '' };
-    try { const o = new URL(c.n8n_url).origin; const h = await fetch(o + '/healthz', { signal: AbortSignal.timeout(4000) }); r.n8n_vivo = h.ok; } catch { r.mensaje = 'No se pudo conectar con n8n. ¿Está iniciado (npx n8n)?'; }
-    if (r.n8n_vivo) { try { const w = await ai.llamarWebhook(c.n8n_url, { ping: true }, 8000); r.webhook_ok = !!w.ok; r.mensaje = w.ok ? 'Conexión correcta: n8n y el workflow responden.' : 'El workflow respondió, pero no confirmó el ping.'; } catch (e) { r.mensaje = 'n8n está activo, pero el workflow no responde: ' + e.message + ' Verifica que esté importado y PUBLICADO (botón Publish arriba a la derecha en n8n).'; } }
+    if (c.publico && ai.esUrlLocal(c.n8n_url)) { r.mensaje = 'Esta es la versión pública: el servidor no puede ver el n8n de tu PC (localhost). Usa la dirección de un túnel o de n8n Cloud.'; return json(res, r); }
+    try { const o = new URL(c.n8n_url).origin; const h = await fetch(o + '/healthz', { signal: AbortSignal.timeout(10000) }); r.n8n_vivo = h.ok; } catch { }
+    try { const w = await ai.llamarWebhook(c.n8n_url, { ping: true }, 20000); r.n8n_vivo = true; r.webhook_ok = !!w.ok; r.mensaje = w.ok ? 'Conexión correcta: n8n y el workflow responden.' : 'El workflow respondió, pero no confirmó el ping.'; }
+    catch (e) { r.mensaje = (r.n8n_vivo ? 'n8n está activo, pero el workflow no responde: ' : 'No se pudo conectar con n8n: ') + e.message + (c.publico || /token|HTTP 40[134]/.test(e.message) ? '' : ' ¿Está iniciado (npx n8n) y el workflow PUBLICADO (botón Publish)?'); }
     return json(res, r);
   }
   if (p === '/api/asistente' && m === 'POST') { const b = await leerJSON(req); if (!b.pregunta) throw err(400, 'Escribe una pregunta'); const r = await ai.asistente({ pregunta: String(b.pregunta).slice(0, 1500), historial: b.historial, T: construir(), config: configPublica() }); return json(res, { respuesta: String(r.respuesta || r.text || '').slice(0, 6000) }); }

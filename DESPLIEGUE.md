@@ -39,15 +39,22 @@ Opción Blueprint: **New → Blueprint** con este repositorio (usa `render.yaml`
 
 Ambos detectan el `Dockerfile`. Define las variables `IDI_ADMIN_PASS` e `IDI_SECRET`, monta un volumen en `/data` y listo. Railway asigna el puerto con `PORT`; la app ya lo respeta.
 
-## 5. La IA en el servidor público
+## 5. La IA (n8n) en el servidor público
 
-n8n que corre en tu PC **no es visible desde Internet**. Tienes tres opciones:
+El servidor de Render **no puede ver el n8n de tu PC** (`localhost:5678` es la propia máquina de Render). Tener n8n abierto en tu PC no basta: hay que darle una dirección pública.
 
-1. **Dejar el análisis local de respaldo** (por defecto: la app clasifica con reglas por palabras clave). Sirve para la demo y no cuesta nada.
-2. **n8n Cloud** (prueba gratuita): importa los dos workflows de `n8n/`, crea la credencial Header Auth con tu clave de Anthropic, publica y pega las URLs de producción en `IDI_N8N_URL` e `IDI_N8N_ASISTENTE_URL` (o en Configuración).
-3. **n8n en tu PC expuesto con un túnel** (por ejemplo Cloudflare Tunnel) solo durante la presentación. No lo dejes abierto permanentemente.
+**Opción A · Túnel desde tu PC (gratis; el PC y n8n deben seguir encendidos)**
 
-La clave de API nunca va en la app: vive en n8n.
+1. Una sola vez, en PowerShell: `winget install --id Cloudflare.cloudflared` (cierra y vuelve a abrir PowerShell).
+2. Abre n8n (`iniciar-n8n.bat`) y verifica que el workflow esté publicado.
+3. En otra ventana de PowerShell: `cloudflared tunnel --url http://localhost:5678`. Copia la dirección `https://…trycloudflare.com` que aparece y **deja esa ventana abierta**.
+4. En Render → servicio → Environment, define `IDI_N8N_URL=https://…trycloudflare.com/webhook/idi-clasificar` (el asistente se deduce solo). Cada vez que reinicies el túnel la dirección cambia y hay que actualizarla.
+
+**Opción B · n8n Cloud** (prueba gratis de 14 días; luego de pago): importa `n8n/workflow-idi-ia.json`, crea la credencial de Anthropic, publica y usa la *Production URL* del webhook en `IDI_N8N_URL`.
+
+**Protege el webhook (recomendado en ambas):** en n8n abre los nodos *Webhook clasificar* y *Webhook asistente* → Authentication: **Header Auth** → credencial con Name `x-idi-token` y un valor secreto → Publish. Pon ese mismo valor en la variable `IDI_N8N_TOKEN` de Render y, para la app local, en **Configuración → Token de seguridad**.
+
+La clave de API de Anthropic nunca va en la app: vive en n8n.
 
 ## 6. Seguridad incluida
 
