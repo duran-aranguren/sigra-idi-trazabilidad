@@ -1,5 +1,10 @@
 # SIGRA · Trazabilidad de proyectos I+D+i
 
+> **Demo pública:** https://sigra-idi.onrender.com (acceso con usuario y contraseña; pide un usuario de prueba al autor).
+> Plan gratis de Render: si nadie la usa en 15 minutos se duerme y la primera carga tarda cerca de un minuto; al reiniciar, los datos vuelven al caso de demostración.
+>
+> Proyecto final del Diplomado IA48 (Universidad de América) · Autor: Daniel Durán-Aranguren.
+
 App local para gestionar un portafolio de innovación con la lógica **Stage-Gate** (7 etapas), **ruta crítica**, **mapa de stakeholders**, **limitaciones externas y riesgos**, y un agente de **IA vía n8n** que lee tus archivos (correos, reportes de ensayo, presentaciones, capturas), los clasifica y propone actualizar el proyecto correspondiente.
 
 Incluye un caso **ficticio** (Andina Ingredientes y Soluciones) con **15 proyectos** simulados, uno en cada situación típica: ideas, prototipos con cliente aliado, pilotos retrasados, un proyecto pausado, uno cerrado con evaluación ex-post, etc.
