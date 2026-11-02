@@ -1,0 +1,6 @@
+data
+uploads
+.git
+*.zip
+*.docx
+node_modules

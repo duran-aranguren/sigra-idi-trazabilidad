@@ -1,0 +1,10 @@
+# Datos locales y archivos subidos (nunca al repositorio)
+data/
+uploads/
+node_modules/
+.env
+*.db
+*.db-wal
+*.db-shm
+pruebas/capturas/
+pruebas/resultados.json

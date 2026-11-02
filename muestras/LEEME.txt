@@ -1,0 +1,8 @@
+Archivos de ejemplo para probar la carga de documentos (menú "Documentos e IA"):
+
+- correo_cliente_aliado_IDI-005.eml      Correo de un cliente con resultados de prototipos (proyecto IDI-005)
+- reporte_ensayo_estabilidad_IDI-006.docx Reporte de ensayo con una tabla y un hallazgo de riesgo (IDI-006)
+- avance_piloto_IDI-012.pptx             Presentación de avance del piloto (IDI-012)
+- captura_panel_sensorial_IDI-005.png    Captura de una tabla (solo la IA vía n8n puede leer imágenes)
+
+Súbelos uno a uno y revisa la propuesta antes de aplicarla.

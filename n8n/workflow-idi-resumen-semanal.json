@@ -1,0 +1,135 @@
+{
+  "name": "IDI · Resumen semanal de alertas",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Resumen semanal de alertas\nTodos los lunes consulta la app (http://localhost:3000/api/alertas) y arma el resumen.\nActiva y configura el nodo *Enviar correo* (credencial SMTP o Gmail) para recibirlo.",
+        "height": 150,
+        "width": 420,
+        "color": 4
+      },
+      "id": "61dea5e8-b4f4-41bd-a2ef-1df58411dcb1",
+      "name": "Nota",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -200
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "weeksInterval": 1,
+              "triggerAtDay": [
+                1
+              ],
+              "triggerAtHour": 7,
+              "triggerAtMinute": 30
+            }
+          ]
+        }
+      },
+      "id": "30594172-65e1-4aed-ba86-fada9d1868fe",
+      "name": "Cada lunes 7:30",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:3000/api/alertas",
+        "options": {
+          "timeout": 20000
+        }
+      },
+      "id": "7d820e54-a074-4385-9850-6c6d1d77bd8e",
+      "name": "Consultar alertas de la app",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $input.first().json;\nconst k = d.kpis || {};\nconst lin = (d.alertas || []).slice(0, 25).map(a => `- [${a.nivel.toUpperCase()}] ${a.codigo} · ${a.titulo}: ${a.detalle}`);\nconst texto = `Resumen semanal del portafolio de I+D+i (${d.hoy})\\n\\n` +\n  `Proyectos activos: ${k.activos} | En ruta: ${k.verde} | Atención: ${k.amarillo} | En riesgo: ${k.rojo}\\n` +\n  `Actividades críticas atrasadas: ${k.criticas_atrasadas} | Riesgos altos: ${k.riesgos_altos} | Gates en 30 días: ${k.gates_30d} (vencidos: ${k.gates_vencidos})\\n\\n` +\n  `Alertas prioritarias:\\n` + (lin.join('\\n') || 'Sin alertas.');\nreturn [{ json: { asunto: `Portafolio I+D+i · ${k.rojo} en riesgo, ${k.criticas_atrasadas} críticas atrasadas`, texto } }];\n"
+      },
+      "id": "cc3ae3bf-e986-4d28-8a1a-38050302d688",
+      "name": "Armar resumen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "tu-correo@ejemplo.com",
+        "toEmail": "tu-correo@ejemplo.com",
+        "subject": "={{ $json.asunto }}",
+        "emailFormat": "text",
+        "text": "={{ $json.texto }}",
+        "options": {}
+      },
+      "id": "d2825566-9651-409e-a9ab-802abd2053a6",
+      "name": "Enviar correo",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        720,
+        0
+      ],
+      "disabled": true
+    }
+  ],
+  "connections": {
+    "Cada lunes 7:30": {
+      "main": [
+        [
+          {
+            "node": "Consultar alertas de la app",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Consultar alertas de la app": {
+      "main": [
+        [
+          {
+            "node": "Armar resumen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Armar resumen": {
+      "main": [
+        [
+          {
+            "node": "Enviar correo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "tags": []
+}

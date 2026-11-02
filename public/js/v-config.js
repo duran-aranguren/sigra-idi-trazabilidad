@@ -1,0 +1,52 @@
+import { S, A, esc, attr, api, hacer, toast, confirmar, cargar, descargar, formModal, $, $$ } from './core.js';
+import { card, pageHead } from './v-tablero.js';
+const rerender = () => document.dispatchEvent(new CustomEvent('rerender'));
+
+export const config = {
+  render() {
+    const c = S.T.config;
+    return `${pageHead('Configuración', 'Conexión con n8n e IA, datos y apariencia')}
+    <div class="grid g-12">
+    ${card('Inteligencia artificial vía n8n', 'La app envía los documentos a un webhook de n8n; n8n consulta el modelo y devuelve una propuesta.', `
+      <div class="seg" id="modo"><button data-v="n8n" class="${c.modo_ia === 'n8n' ? 'on' : ''}">n8n + IA</button><button data-v="local" class="${c.modo_ia === 'local' ? 'on' : ''}">Local (sin IA)</button></div>
+      <div class="grid-form mt" style="margin-top:14px"><label class="fld full"><span>Webhook de clasificación de documentos</span><input id="u1" value="${attr(c.n8n_url)}"><small>Con el workflow activo: http://localhost:5678/webhook/idi-clasificar</small></label>
+      <label class="fld full"><span>Webhook del asistente</span><input id="u2" value="${attr(c.n8n_asistente_url)}"></label>
+      <label class="fld full" style="grid-template-columns:auto 1fr;align-items:center"><input type="checkbox" id="fb" ${c.fallback_local === '1' ? 'checked' : ''} style="width:auto"><span style="font-weight:500">Si n8n no responde, usar el análisis local básico</span></label></div>
+      <div class="row mt" style="margin-top:14px"><button class="btn primary" id="guardar">Guardar</button><button class="btn" id="probar">Probar conexión</button><span id="res" class="small"></span></div>`)}
+    ${card('Puesta en marcha de n8n', '', `<ol style="margin:0;padding-left:20px;line-height:1.75"><li>Abre <code>iniciar-n8n.bat</code> (o ejecuta <code>npx n8n</code>). Requiere Node.js 24 LTS. Abre <a href="http://localhost:5678" target="_blank" rel="noopener">localhost:5678</a>.</li><li>En n8n crea un workflow vacío y usa el menú <b>⋯ → Import from File…</b> para elegir <code>n8n/workflow-idi-ia.json</code>.</li><li>Crea la credencial <b>Header Auth</b> con el nombre <code>x-api-key</code> y tu clave de API de Anthropic, y asígnala al nodo <i>Llamar a Claude</i>.</li><li>Pulsa <b>Publish</b> (arriba a la derecha) para dejar el workflow activo.</li><li>Vuelve aquí y pulsa <b>Probar conexión</b>.</li></ol><p class="small muted">La clave de API queda guardada en n8n, nunca en esta app.</p>`)}
+    </div>
+    <div class="grid mt" id="red-card"></div>
+    <div class="grid mt" id="usr-card"></div>
+    <div class="grid g2 mt">
+    ${card('Datos', S.T.config.demo === '1' ? 'Estás viendo el caso de demostración (empresa ficticia).' : 'Datos propios.', `<label class="fld" style="margin-bottom:12px"><span>Nombre de la organización (aparece en el tablero)</span><div class="row"><input id="emp" value="${attr(S.T.empresa || '')}"><button class="btn" id="gemp">Guardar</button></div></label><div class="row wrap"><a class="btn" href="/api/admin/exportar">⬇ Respaldo JSON</a><button class="btn" data-act="reset-demo">Restablecer caso demo</button><button class="btn danger" data-act="vaciar">Vaciar y empezar propio</button></div><p class="small muted mt" style="margin-top:10px">Los datos están en <code>data/idi.db</code> (SQLite) y los archivos en <code>uploads/</code>. Copia esas dos carpetas para respaldar todo.</p>`)}
+    ${card('Apariencia', '', `<div class="seg"><button data-act="tema" data-t="light">Claro</button><button data-act="tema" data-t="dark">Oscuro</button></div>`)}
+    </div>`;
+  },
+  mount(root) {
+    api('GET', '/api/red').then(r => { const el = $('#red-card', root); if (!el) return; if (r.publico) { el.remove(); return; }
+      el.innerHTML = card('Acceso desde el celular', r.activo ? 'Modo red activo: el celular debe estar en la misma red Wi-Fi que este PC.' : 'Ahora la app solo acepta conexiones de este PC.', r.activo
+        ? `<div class="row wrap" style="gap:28px;align-items:flex-start"><div><div class="kicker">Dirección para el celular</div>${r.urls.map(u => `<div style="font-family:var(--mono);font-size:18px;margin-top:4px">${esc(u)}</div>`).join('') || '<div class="muted">No se detectó una red Wi-Fi.</div>'}</div>${r.pin ? `<div><div class="kicker">PIN de acceso</div><div style="font-family:var(--mono);font-size:26px;letter-spacing:.2em;margin-top:2px">${esc(r.pin)}</div><button class="btn sm" data-act="nuevo-pin" style="margin-top:6px">Generar PIN nuevo</button></div>` : ''}<div class="small muted" style="max-width:420px">En el celular abre Chrome, escribe la dirección y luego el PIN. Para tenerla como app: menú ⋮ → <b>Agregar a la pantalla principal</b>. El PC debe estar encendido con la ventana de la app abierta.</div></div>`
+        : `<p class="muted" style="margin:0">Cierra la ventana actual de la app y ábrela con <b>iniciar-red.bat</b>. Aquí aparecerán la dirección y el PIN para el celular.</p>`); }).catch(() => {});
+    const pintarUsuarios = async () => { const el = $('#usr-card', root); if (!el) return; let y; try { y = await api('GET', '/api/yo'); } catch { return; } if (!y.publico || y.rol !== 'admin') return;
+      const us = await api('GET', '/api/usuarios');
+      el.innerHTML = card('Usuarios y roles', 'Administrador: todo · Editor: crea y edita · Lector: solo consulta. Las contraseñas se guardan cifradas (scrypt).', `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Usuario</th><th>Nombre</th><th>Rol</th><th>Estado</th><th>Último acceso</th><th></th></tr></thead><tbody>${us.map(u => `<tr><td><b>${esc(u.usuario)}</b></td><td>${esc(u.nombre)}</td><td>${esc(u.rol)}</td><td>${u.activo ? 'Activo' : 'Inactivo'}</td><td>${esc((u.ultimo_acceso || '—').slice(0, 16).replace('T', ' '))}</td><td style="white-space:nowrap"><button class="btn sm" data-u="${u.id}" data-a="editar">Editar</button> <button class="btn sm" data-u="${u.id}" data-a="borrar">Eliminar</button></td></tr>`).join('')}</tbody></table></div><div class="row mt" style="margin-top:14px"><button class="btn primary" id="nu">＋ Nuevo usuario</button></div>`);
+      const campos = nuevo => [{ k: 'usuario', label: 'Usuario', req: true, hint: '3 a 40 caracteres: letras, números, punto o guion', ...(nuevo ? {} : {}) }, { k: 'nombre', label: 'Nombre' }, { k: 'rol', label: 'Rol', t: 'select', opts: ['lector', 'editor', 'admin'] }, { k: 'password', label: nuevo ? 'Contraseña inicial' : 'Nueva contraseña (opcional)', t: 'password', req: nuevo, hint: 'Mínimo 10 caracteres' }];
+      $('#nu', el).onclick = async () => { const v = await formModal({ titulo: 'Nuevo usuario', campos: campos(true), valores: { rol: 'lector' }, guardar: 'Crear' }); if (!v) return; try { await api('POST', '/api/usuarios', v); toast('Usuario creado'); pintarUsuarios(); } catch (e) { toast(e.message, 'bad'); } };
+      el.querySelectorAll('button[data-u]').forEach(b => b.onclick = async () => { const u = us.find(x => x.id === Number(b.dataset.u));
+        if (b.dataset.a === 'borrar') { if (await confirmar(`¿Eliminar al usuario ${u.usuario}?`, 'Eliminar', true)) { try { await api('DELETE', '/api/usuarios/' + u.id); toast('Usuario eliminado'); pintarUsuarios(); } catch (e) { toast(e.message, 'bad'); } } return; }
+        const c = campos(false).filter(x => x.k !== 'usuario'); c.push({ k: 'activo', label: 'Estado', t: 'select', opts: [['1', 'Activo'], ['0', 'Inactivo']] });
+        const v = await formModal({ titulo: 'Editar ' + u.usuario, campos: c, valores: { nombre: u.nombre, rol: u.rol, activo: String(u.activo) } }); if (!v) return;
+        const body = { nombre: v.nombre, rol: v.rol, activo: v.activo === '1' }; if (v.password) body.password = v.password;
+        try { await api('PUT', '/api/usuarios/' + u.id, body); toast('Usuario actualizado'); pintarUsuarios(); } catch (e) { toast(e.message, 'bad'); } }); };
+    pintarUsuarios();
+    let modo = S.T.config.modo_ia;
+    $$('#modo button', root).forEach(b => b.onclick = () => { modo = b.dataset.v; $$('#modo button', root).forEach(x => x.classList.toggle('on', x === b)); });
+    const body = () => ({ modo_ia: modo, n8n_url: $('#u1').value.trim(), n8n_asistente_url: $('#u2').value.trim(), fallback_local: $('#fb').checked });
+    $('#gemp', root).onclick = async () => { await hacer(() => api('PUT', '/api/config', { empresa: $('#emp').value.trim() }), 'Nombre guardado'); rerender(); };
+    $('#guardar', root).onclick = async () => { await hacer(() => api('PUT', '/api/config', body()), 'Configuración guardada'); rerender(); };
+    $('#probar', root).onclick = async () => { const r = $('#res'); r.innerHTML = '<span class="spin"></span> Probando…'; try { await api('PUT', '/api/config', body()); const x = await api('POST', '/api/config/probar'); r.innerHTML = `<span class="chip ${x.webhook_ok ? 'ok' : 'bad'}">${x.webhook_ok ? '✔ Conectado' : '✖ Sin conexión'}</span> ${esc(x.mensaje)}`; } catch (e) { r.innerHTML = `<span class="chip bad">Error</span> ${esc(e.message)}`; } };
+  }
+};
+A['nuevo-pin'] = async () => { if (await confirmar('Se generará un PIN nuevo y los celulares conectados tendrán que volver a ingresarlo. ¿Continuar?', 'Generar PIN')) { try { await api('POST', '/api/red/pin'); toast('PIN actualizado'); rerender(); } catch (e) { toast(e.message, 'bad'); } } };
+A['reset-demo'] = async () => { if (await confirmar('Se reemplazarán TODOS los datos actuales por el caso de demostración (15 proyectos). ¿Continuar?', 'Restablecer', true)) { await hacer(() => api('POST', '/api/admin/reset-demo'), 'Caso demo restablecido'); rerender(); } };
+A['vaciar'] = async () => { if (await confirmar('Se borrarán TODOS los proyectos y datos (se conserva el equipo base). Haz antes un respaldo JSON. ¿Continuar?', 'Vaciar todo', true)) { await hacer(() => api('POST', '/api/admin/vaciar'), 'Base vaciada: crea tu primer proyecto'); location.hash = '#/proyectos'; } };

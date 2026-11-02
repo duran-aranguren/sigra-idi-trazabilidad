@@ -1,0 +1,15 @@
+{
+  "name": "idi-trazabilidad",
+  "version": "1.0.0",
+  "description": "Trazabilidad de proyectos de innovación (I+D+i): Stage-Gate, ruta crítica, stakeholders, riesgos e IA vía n8n. Sin dependencias externas.",
+  "main": "server.js",
+  "private": true,
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning server.js",
+    "reset-demo": "node --disable-warning=ExperimentalWarning scripts/reset-demo.js",
+    "start:red": "node --disable-warning=ExperimentalWarning server.js --red"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  }
+}

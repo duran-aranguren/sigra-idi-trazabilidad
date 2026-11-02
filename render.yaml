@@ -1,0 +1,25 @@
+# Blueprint de Render (opcional): «New → Blueprint» y elige el repositorio.
+# Equivale a crear el Web Service a mano con Language = Node (ver DESPLIEGUE.md).
+services:
+  - type: web
+    name: sigra-idi
+    runtime: node
+    plan: free            # Gratis: se duerme a los 15 min sin uso y los datos vuelven al caso demo al reiniciar.
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_VERSION
+        value: "24"
+      - key: IDI_PUBLICO
+        value: "1"
+      - key: IDI_HTTPS
+        value: "1"
+      - key: IDI_ADMIN_USER
+        value: admin
+      - key: IDI_ADMIN_PASS   # se te pedirá al crear el Blueprint (mínimo 10 caracteres)
+        sync: false
+      - key: IDI_SECRET       # firma de las sesiones; Render la genera sola
+        generateValue: true
+      - key: IDI_USUARIOS     # opcional: docente:lector:ClaveLarga123;ana:editor:OtraClave456
+        sync: false
